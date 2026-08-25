@@ -415,6 +415,18 @@
         <div><span class="text-slate-400">🏆 Récord</span> <span class="text-fuchsia-400" id="final-best">0</span></div>
         <div id="new-record" class="hidden col-span-2 text-amber-300 font-black text-sm mt-1">👑 ¡NUEVO RÉCORD!</div>
       </div>
+      <div class="mt-4 text-left">
+        <label for="player-name" class="block text-xs font-bold text-slate-300 mb-1">Tu nombre</label>
+        <div class="flex gap-2">
+          <input id="player-name" maxlength="24" autocomplete="name" placeholder="Escribe tu nombre" class="min-w-0 flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-400" />
+          <button id="save-score" onclick="saveScore()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-floppy-disk mr-1"></i>Guardar</button>
+        </div>
+        <div id="leaderboard-status" class="text-[10px] text-slate-400 mt-1 min-h-4"></div>
+      </div>
+      <div class="mt-4 text-left">
+        <div class="text-xs font-black text-fuchsia-300 uppercase tracking-wider mb-2">🏆 Mejores puntajes</div>
+        <ol id="leaderboard-list" class="text-xs font-mono text-slate-300 space-y-1"></ol>
+      </div>
       <div class="text-sm font-bold text-white">8 + 4 = <span class="text-amber-400">12</span></div>
       <button onclick="resetGame()" class="mt-4 w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition"><i class="fa-solid fa-rotate-right mr-1"></i> Jugar de nuevo</button>
     </div>
@@ -425,6 +437,7 @@
 
     const BEST_KEY = 'cpuproj_best';
     const MODE_KEY = 'cpuproj_mode';
+    const LEADERBOARD_KEY = 'cpuproj_leaderboard';
     const HAS_ANIME = typeof anime !== 'undefined';
 
     // Estado de la CPU
@@ -697,6 +710,64 @@
       document.getElementById('best-score').innerText = bestScore;
     }
 
+    function getLocalLeaderboard() {
+      try { return JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]'); } catch(e) { return []; }
+    }
+
+    function renderLeaderboard(entries) {
+      const list = document.getElementById('leaderboard-list');
+      if (!list) return;
+      list.innerHTML = entries.length
+        ? entries.slice(0, 10).map((entry, index) => '<li class="flex justify-between gap-3"><span>' + (index + 1) + '. ' + escapeHtml(entry.name) + '</span><strong class="text-amber-300">' + entry.score + '</strong></li>').join('')
+        : '<li class="text-slate-500">Todavía no hay puntajes registrados.</li>';
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/leaderboard');
+        if (!response.ok) throw new Error('leaderboard unavailable');
+        renderLeaderboard(await response.json());
+      } catch(e) {
+        renderLeaderboard(getLocalLeaderboard());
+      }
+    }
+
+    async function saveScore() {
+      const input = document.getElementById('player-name');
+      const button = document.getElementById('save-score');
+      const status = document.getElementById('leaderboard-status');
+      const name = input.value.trim();
+      if (!name) {
+        status.innerText = 'Escribe un nombre para guardar el puntaje.';
+        input.focus();
+        return;
+      }
+      const entry = { name, score, time: timerSeconds, successes, errors, mode: guideMode ? 'guia' : 'reto' };
+      button.disabled = true;
+      status.innerText = 'Guardando...';
+      try {
+        const response = await fetch('/api/leaderboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry)
+        });
+        if (!response.ok) throw new Error('save failed');
+        renderLeaderboard(await response.json());
+        status.innerText = 'Puntaje guardado en leaderboard.json.';
+      } catch(e) {
+        const localEntries = getLocalLeaderboard().concat(entry).sort((a, b) => b.score - a.score).slice(0, 10);
+        try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(localEntries)); } catch(storageError) {}
+        renderLeaderboard(localEntries);
+        status.innerText = 'Servidor no disponible: guardado solo en este navegador.';
+      } finally {
+        button.disabled = false;
+      }
+    }
+
     // ===== MODO GUÍA / RETO =====
     function setMode(guide) {
       guideMode = guide;
@@ -931,6 +1002,9 @@
       renderBest();
       document.getElementById('final-best').innerText = bestScore;
       document.getElementById('new-record').classList.toggle('hidden', !isNewRecord);
+      document.getElementById('player-name').value = '';
+      document.getElementById('leaderboard-status').innerText = '';
+      loadLeaderboard();
 
       document.getElementById('victory-modal').classList.remove('hidden');
       if (HAS_ANIME) {
