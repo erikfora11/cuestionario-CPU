@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+  <title>🧠 RETO: CONVIÉRTETE EN LA CPU</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@700;800;900&display=swap');
+    * { box-sizing: border-box; user-select: none; }
+    body { font-family: 'Inter', sans-serif; background: #0b1121; }
+    .font-mono { font-family: 'Fira Code', monospace; }
+
+    /* ===== TARJETAS DE COMPONENTES ===== */
+    .component {
+      --c1: #6366f1;
+      --c2: #4338ca;
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(99,102,241,0.08), transparent 60%),
+        linear-gradient(165deg, #22304a 0%, #131c30 55%, #0b1220 100%);
+      border: 1px solid rgba(148,163,184,0.18);
+      border-radius: 16px;
+      padding: 12px 8px 10px;
+      text-align: center;
+      cursor: pointer;
+      min-width: 60px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 12px 28px -10px rgba(0,0,0,0.75),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    }
+    /* Barra de acento superior con el color del componente */
+    .component::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 16%; right: 16%;
+      height: 3px;
+      border-radius: 0 0 6px 6px;
+      background: linear-gradient(90deg, var(--c1), var(--c2));
+      opacity: .95;
+    }
+    /* Reflejo tipo cristal */
+    .component::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), transparent 32%);
+      pointer-events: none;
+    }
+    .component:hover {
+      transform: translateY(-4px) scale(1.02);
+      border-color: var(--c1);
+      box-shadow:
+        0 18px 34px -12px rgba(0,0,0,0.8),
+        0 0 22px -6px var(--c1),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .component:active { transform: translateY(-1px) scale(0.96); }
+
+    .comp-icon {
+      width: 36px; height: 36px;
+      margin: 0 auto 7px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 11px;
+      font-size: 15px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--c1), var(--c2));
+      box-shadow: 0 8px 16px -6px var(--c1), inset 0 1px 0 rgba(255,255,255,0.35);
+      position: relative; z-index: 1;
+    }
+    .component .label { font-size: 11px; font-weight: 800; color: #cbd5e1; letter-spacing: 0.08em; position: relative; z-index: 1; }
+    .component .value { font-size: 16px; font-weight: 900; font-family: 'Fira Code', monospace; color: #f1f5f9; margin-top: 3px; position: relative; z-index: 1; }
+    .component .desc { font-size: 8px; color: #64748b; margin-top: 2px; position: relative; z-index: 1; }
+
+    .component.correct {
+      border-color: #22c55e;
+      box-shadow: 0 0 26px -4px rgba(34,197,94,0.55), 0 12px 28px -10px rgba(0,0,0,0.75);
+    }
+    .component.wrong {
+      border-color: #ef4444;
+      box-shadow: 0 0 26px -4px rgba(239,68,68,0.55), 0 12px 28px -10px rgba(0,0,0,0.75);
+    }
+
+    /* Brillo suave: indica que TODOS son seleccionables sin revelar la respuesta */
+    @keyframes breathe {
+      0%, 100% { border-color: rgba(148,163,184,0.18); }
+      50% { border-color: rgba(99,102,241,0.45); }
+    }
+    .component.selectable { animation: breathe 2.2s ease-in-out infinite; }
+
+    /* Modo GUIA: resalta el componente objetivo paso a paso */
+    @keyframes targetPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(129,140,248,0.55), 0 12px 28px -10px rgba(0,0,0,0.75);
+        border-color: #818cf8;
+      }
+      50% {
+        box-shadow: 0 0 0 12px rgba(129,140,248,0), 0 12px 28px -10px rgba(0,0,0,0.75);
+        border-color: #a5b4fc;
+      }
+    }
+    .component.target {
+      border-color: #818cf8;
+      animation: targetPulse 1.4s ease-out infinite;
+      transform: scale(1.05);
+    }
+    .component.target .comp-icon { filter: brightness(1.25); }
+
+    /* ===== MEMORIA RAM VISUAL ===== */
+    .ram-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ram-cell {
+      --rc: #22d3ee;
+      flex: 1 1 72px;
+      max-width: 110px;
+      border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.18);
+      background: linear-gradient(165deg, #17233c 0%, #0d1526 100%);
+      padding: 5px 8px 6px;
+      text-align: center;
+      font-family: 'Fira Code', monospace;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .35s ease, box-shadow .35s ease, transform .35s ease;
+    }
+    .ram-cell::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 2px;
+      border-radius: 0 0 4px 4px;
+      background: var(--rc);
+      opacity: .85;
+    }
+    .ram-cell.instr { --rc: #f472b6; }
+    .ram-cell.data  { --rc: #22d3ee; }
+    .ram-cell .addr {
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .ram-cell .content {
+      font-size: 12px;
+      font-weight: 900;
+      color: #f1f5f9;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Celda apuntada por el MAR */
+    .ram-cell.active {
+      border-color: var(--rc);
+      box-shadow: 0 0 0 2px rgba(251,191,36,0.55), 0 0 16px -2px var(--rc);
+      transform: translateY(-3px);
+    }
+    .ram-cell.active .addr { color: #fbbf24; }
+    @keyframes marPoint {
+      0%, 100% { box-shadow: 0 0 0 2px rgba(251,191,36,0.55), 0 0 16px -2px var(--rc); }
+      50% { box-shadow: 0 0 0 5px rgba(251,191,36,0.15), 0 0 20px -2px var(--rc); }
+    }
+    .ram-cell.active { animation: marPoint 1.6s ease-in-out infinite; }
+    /* Celda recién escrita */
+    .ram-cell.written {
+      border-color: #22c55e;
+      box-shadow: 0 0 18px -2px rgba(34,197,94,0.9);
+    }
+
+    /* Valor volando entre componentes */
+    .fly-wrap { position: absolute; z-index: 80; pointer-events: none; }
+    .fly-chip {
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      font-family: 'Fira Code', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 4px 14px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 0 24px rgba(99,102,241,0.85);
+    }
+    .fly-chip.chip-green { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 0 24px rgba(34,197,94,0.85); }
+    .fly-chip.chip-red { background: linear-gradient(135deg, #dc2626, #ef4444); box-shadow: 0 0 24px rgba(239,68,68,0.85); }
+
+    /* Puntos flotantes (+100 / -20) */
+    .float-pts {
+      position: fixed;
+      z-index: 90;
+      font-size: 12px;
+      font-weight: 900;
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+
+    /* Confeti */
+    .confetti-piece { position: fixed; top: -20px; z-index: 100; pointer-events: none; border-radius: 2px; }
+
+    /* Bus visual */
+    .bus-line {
+      position: relative;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      margin: 6px 0;
+      transition: background 0.5s;
+    }
+    .bus-line.active { background: #22c55e; box-shadow: 0 0 15px #22c55e; }
+    .bus-label { font-size: 8px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+
+    /* Botón de acción */
+    .action-btn {
+      background: #6366f1;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 800;
+      font-size: 14px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+    }
+    .action-btn:active { transform: scale(0.95); }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Modal */
+    .modal-backdrop { backdrop-filter: blur(8px); background: rgba(0,0,0,0.7); }
+
+    /* ===== RESPONSIVE ===== */
+    .grid-components {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+      gap: 10px;
+    }
+    @media (min-width: 640px) {
+      .grid-components { grid-template-columns: repeat(4, 1fr); }
+      .component { padding: 16px 14px 12px; }
+      .comp-icon { width: 42px; height: 42px; font-size: 17px; border-radius: 13px; }
+      .component .label { font-size: 13px; }
+      .component .value { font-size: 20px; }
+      .component .desc { font-size: 9px; }
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <!-- HEADER -->
+  <header class="bg-slate-900/80 border-b border-slate-800 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-2 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🧠</span>
+        <h1 class="text-sm font-black bg-gradient-to-r from-indigo-400 to-purple-300 bg-clip-text text-transparent">RETO: SÉ LA CPU</h1>
+      </div>
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="text-slate-400">⏱</span> <span id="timer" class="text-cyan-400 font-bold">00:00</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-slate-400">🎯</span> <span id="score" class="text-amber-400 font-bold">0</span>
+        <span id="streak-badge" class="hidden px-1.5 py-0.5 rounded-full bg-orange-950 border border-orange-700 text-orange-300 font-bold">🔥 x2</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-slate-400">🏆</span> <span id="best-score" class="text-fuchsia-400 font-bold">0</span>
+        <button onclick="resetGame()" class="ml-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-4xl w-full mx-auto p-3 flex flex-col gap-4">
+
+    <!-- PANEL DE INSTRUCCIÓN Y ESTADO -->
+    <div class="bg-slate-900/60 rounded-2xl p-4 border border-slate-800 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider">🔹 Misión actual</div>
+          <div id="mission" class="text-sm font-bold text-white">Preparar la primera instrucción</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Selector de modo: Guia (resalta el objetivo) vs Reto (x1.5 pts) -->
+          <div class="flex items-center gap-1 bg-slate-950/80 rounded-full p-1 border border-slate-800">
+            <button id="mode-guide" onclick="setMode(true)" title="Resalta el componente correcto en cada paso (sin multiplicador)" class="px-2.5 py-1 rounded-full text-[10px] font-black transition">🎓 Guía</button>
+            <button id="mode-reto" onclick="setMode(false)" title="Sin pistas visuales. Los puntos se multiplican ×1.5" class="px-2.5 py-1 rounded-full text-[10px] font-black transition">🔥 Reto ×1.5</button>
+          </div>
+          <span class="text-[10px] text-slate-400">Paso</span>
+          <span id="step-counter" class="bg-indigo-950/80 text-indigo-300 px-3 py-1 rounded-full text-xs font-bold border border-indigo-800">1/14</span>
+        </div>
+      </div>
+      <div id="instruction-detail" class="text-xs text-slate-400 mt-1">Haz clic en el componente correcto para continuar</div>
+      <div id="feedback" class="mt-2 text-xs font-bold hidden"></div>
+      <!-- Barra de progreso paso a paso -->
+      <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div id="progress-fill" class="h-full w-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 rounded-full transition-all duration-700 ease-out"></div>
+      </div>
+    </div>
+
+    <!-- DIAGRAMA DE COMPONENTES -->
+    <div class="bg-slate-900/60 rounded-2xl p-4 border border-slate-800 shadow-xl">
+      <div class="grid-components" id="components-grid">
+        <!-- PC -->
+        <div id="comp-PC" class="component clickable" data-comp="PC" style="--c1:#38bdf8;--c2:#0369a1">
+          <div class="comp-icon"><i class="fa-solid fa-forward"></i></div>
+          <div class="label">PC</div>
+          <div class="value" id="val-PC">0</div>
+          <div class="desc">Contador de programa</div>
+        </div>
+        <!-- MAR -->
+        <div id="comp-MAR" class="component clickable" data-comp="MAR" style="--c1:#fbbf24;--c2:#d97706">
+          <div class="comp-icon"><i class="fa-solid fa-location-dot"></i></div>
+          <div class="label">MAR</div>
+          <div class="value" id="val-MAR">--</div>
+          <div class="desc">Dir. de memoria</div>
+        </div>
+        <!-- MDR -->
+        <div id="comp-MDR" class="component clickable" data-comp="MDR" style="--c1:#a78bfa;--c2:#7c3aed">
+          <div class="comp-icon"><i class="fa-solid fa-cube"></i></div>
+          <div class="label">MDR</div>
+          <div class="value" id="val-MDR">--</div>
+          <div class="desc">Registro de datos</div>
+        </div>
+        <!-- IR -->
+        <div id="comp-IR" class="component clickable" data-comp="IR" style="--c1:#f472b6;--c2:#db2777">
+          <div class="comp-icon"><i class="fa-solid fa-scroll"></i></div>
+          <div class="label">IR</div>
+          <div class="value" id="val-IR">---</div>
+          <div class="desc">Instrucción</div>
+        </div>
+        <!-- ALU / ACC -->
+        <div id="comp-ALU" class="component clickable" data-comp="ALU" style="--c1:#34d399;--c2:#059669">
+          <div class="comp-icon"><i class="fa-solid fa-calculator"></i></div>
+          <div class="label">ALU / ACC</div>
+          <div class="value" id="val-ACC">0</div>
+          <div class="desc">Acumulador</div>
+        </div>
+        <!-- UC -->
+        <div id="comp-UC" class="component clickable" data-comp="UC" style="--c1:#f87171;--c2:#dc2626">
+          <div class="comp-icon"><i class="fa-solid fa-gears"></i></div>
+          <div class="label">UC</div>
+          <div class="value text-xs" id="val-UC">Esperando</div>
+          <div class="desc">Unidad de control</div>
+        </div>
+        <!-- RAM (especial) -->
+        <div id="comp-RAM" class="component clickable" data-comp="RAM" style="--c1:#22d3ee;--c2:#0891b2">
+          <div class="comp-icon"><i class="fa-solid fa-memory"></i></div>
+          <div class="label">RAM</div>
+          <div class="value text-xs" id="val-RAM">—</div>
+          <div class="desc">Memoria</div>
+        </div>
+      </div>
+
+      <!-- MEMORIA RAM VISUAL -->
+      <div class="mt-4">
+        <div class="flex items-center justify-between flex-wrap gap-1">
+          <div class="bus-label"><i class="fa-solid fa-memory mr-0.5"></i> Contenido de la memoria</div>
+          <div class="text-[8px] text-slate-500">
+            <span class="text-pink-400 font-bold">Instrucciones</span> ·
+            <span class="text-cyan-300 font-bold">Datos</span> ·
+            <span class="text-amber-300 font-bold">Anillo = celda apuntada por MAR</span>
+          </div>
+        </div>
+        <div class="ram-grid mt-1" id="ram-grid"></div>
+      </div>
+
+      <!-- BUSES -->
+      <div class="mt-3 grid grid-cols-3 gap-2">
+        <div>
+          <div class="bus-label"><i class="fa-solid fa-tower-broadcast mr-0.5"></i> Bus Direcciones</div>
+          <div class="bus-line" id="bus-addr"><div class="text-[8px] text-slate-500 text-right" id="bus-addr-val">--</div></div>
+        </div>
+        <div>
+          <div class="bus-label"><i class="fa-solid fa-tower-broadcast mr-0.5"></i> Bus Datos</div>
+          <div class="bus-line" id="bus-data"><div class="text-[8px] text-slate-500 text-right" id="bus-data-val">--</div></div>
+        </div>
+        <div>
+          <div class="bus-label"><i class="fa-solid fa-tower-broadcast mr-0.5"></i> Bus Control</div>
+          <div class="bus-line" id="bus-ctrl"><div class="text-[8px] text-slate-500 text-right" id="bus-ctrl-val">ESPERA</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTÓN DE AYUDA -->
+    <div class="flex gap-2">
+      <button onclick="showHint()" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition"><i class="fa-solid fa-lightbulb text-amber-300 mr-1"></i> Pista <span class="text-red-400">(-25)</span></button>
+    </div>
+
+    <!-- LEYENDA -->
+    <div class="text-[9px] text-slate-500 text-center flex flex-wrap gap-3 justify-center">
+      <span><i class="fa-solid fa-circle-notch text-indigo-300 mr-0.5"></i> <span class="text-indigo-300">Pulso índigo</span> = objetivo (modo Guía)</span>
+      <span>🟩 Verde = correcto</span>
+      <span>🟥 Rojo = error (-20)</span>
+      <span>🔥 Racha = +15 extra</span>
+      <span>⚡ Rápido (&lt;5s) = +20</span>
+      <span>🔥 Reto = puntos ×1.5</span>
+    </div>
+  </main>
+
+  <!-- MODAL VICTORIA -->
+  <div id="victory-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-emerald-500 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl">
+      <div class="text-5xl mb-2">🎉</div>
+      <h2 class="text-xl font-black text-emerald-300">¡CPU Dominada!</h2>
+      <p class="text-sm text-slate-300 mt-1">Has ejecutado el programa correctamente</p>
+      <div class="my-4 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs font-mono grid grid-cols-2 gap-1">
+        <div><span class="text-slate-400">Tiempo</span> <span class="text-cyan-400" id="final-time">0s</span></div>
+        <div><span class="text-slate-400">Puntaje</span> <span class="text-amber-400" id="final-score">0</span></div>
+        <div><span class="text-slate-400">Aciertos</span> <span class="text-emerald-400" id="final-success">0</span></div>
+        <div><span class="text-slate-400">Errores</span> <span class="text-red-400" id="final-errors">0</span></div>
+        <div><span class="text-slate-400">Modo</span> <span class="text-indigo-300" id="final-mode">Guía</span></div>
+        <div><span class="text-slate-400">🏆 Récord</span> <span class="text-fuchsia-400" id="final-best">0</span></div>
+        <div id="new-record" class="hidden col-span-2 text-amber-300 font-black text-sm mt-1">👑 ¡NUEVO RÉCORD!</div>
+      </div>
+      <div class="text-sm font-bold text-white">8 + 4 = <span class="text-amber-400">12</span></div>
+      <button onclick="resetGame()" class="mt-4 w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition"><i class="fa-solid fa-rotate-right mr-1"></i> Jugar de nuevo</button>
+    </div>
+  </div>
+
+  <script>
+    // ===================== GAME ENGINE =====================
+
+    const BEST_KEY = 'cpuproj_best';
+    const MODE_KEY = 'cpuproj_mode';
+    const HAS_ANIME = typeof anime !== 'undefined';
+
+    // Estado de la CPU
+    let cpu = {
+      PC: 0,
+      MAR: '--',
+      MDR: '--',
+      IR: '---',
+      UC: 'Esperando',
+      ACC: 0,
+      RAM: { 0:'LOAD 10', 1:'ADD 11', 2:'STORE 12', 3:'HALT', 10:8, 11:4, 12:'?' },
+      busAddr: '--',
+      busData: '--',
+      busCtrl: 'ESPERA'
+    };
+
+    // Estado del juego
+    let currentStep = 0;
+    let score = 0;
+    let shownScore = 0;
+    let successes = 0;
+    let errors = 0;
+    let streak = 0;
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let gameFinished = false;
+    let hintUsedThisStep = false;
+    let stepStart = 0;
+    let stepResolved = false;
+    let advanceTimer = null;
+    let bestScore = 0;
+    try { bestScore = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch(e) {}
+    // Modo guía: resalta paso a paso el componente esperado.
+    // POR DEFECTO ESTÁ APAGADO para no revelar la respuesta;
+    // solo se activa si el usuario lo eligió explícitamente.
+    let guideMode = false;
+    try { guideMode = localStorage.getItem(MODE_KEY) === 'guia'; } catch(e) {}
+
+    // ===== DEFINICIÓN DE LOS PASOS DEL JUEGO =====
+    const STEPS = [
+      { mission: 'Iniciar la búsqueda de la instrucción', detail: 'El PC tiene la dirección de la primera instrucción. Haz clic en el componente que debe recibir esa dirección.', correctComp: 'MAR', hint: 'El PC apunta a la instrucción, pero la RAM necesita saber qué dirección leer. ¿Quién guarda la dirección?',
+        action: () => { cpu.MAR = cpu.PC; cpu.busAddr = cpu.PC; updateUI(); flyValue('PC','MAR',cpu.PC); flashBus('bus-addr'); } },
+      { mission: 'Solicitar lectura de memoria', detail: 'La instrucción espera en la memoria, en la dirección que ya fue cargada. Haz clic en el componente que ejecuta la lectura.', correctComp: 'RAM', hint: 'El MAR ya tiene la dirección, ahora la RAM debe leer. ¿Qué componente ejecuta la lectura? (Pista: es la memoria)',
+        action: () => { cpu.busCtrl = 'READ'; cpu.MDR = cpu.RAM[cpu.MAR]; cpu.busData = cpu.MDR; updateUI(); flashBus('bus-ctrl'); flyValue('RAM','MDR',cpu.MDR); flashBus('bus-data'); } },
+      { mission: 'Mover instrucción al IR', detail: 'La instrucción "LOAD 10" ya fue traída y está en el registro de datos. ¿En qué componente se guarda para poder decodificarla?', correctComp: 'IR', hint: 'El MDR tiene la instrucción, ahora debe decodificarse. ¿Dónde se almacena la instrucción actual?',
+        action: () => { cpu.IR = cpu.MDR; cpu.PC++; cpu.UC = 'Decodificando: ' + cpu.IR; updateUI(); flyValue('MDR','IR',cpu.IR); } },
+      { mission: 'Preparar dirección del dato', detail: 'LOAD 10 necesita el valor guardado en la dirección 10. Antes de leerla, alguien debe llevar esa dirección hasta la memoria. ¿Quién guarda direcciones?', correctComp: 'MAR', hint: 'LOAD 10 significa que debe cargar el dato de la dirección 10. El MAR guarda direcciones.',
+        action: () => { cpu.MAR = 10; cpu.busAddr = 10; updateUI(); flyValue('IR','MAR',10); flashBus('bus-addr'); } },
+      { mission: 'Leer dato de RAM[10]', detail: 'La dirección del dato ya está cargada. Activa al componente que lee la memoria para traer ese valor.', correctComp: 'RAM', hint: 'El MAR tiene la dirección 10, ahora la RAM debe leer y poner el dato en el MDR.',
+        action: () => { cpu.busCtrl = 'READ'; cpu.MDR = cpu.RAM[10]; cpu.busData = cpu.MDR; updateUI(); flashBus('bus-ctrl'); flyValue('RAM','MDR',cpu.MDR); flashBus('bus-data'); } },
+      { mission: 'Cargar dato en el Acumulador', detail: 'El dato ya está en el registro de datos. Muévelo al componente capaz de hacer operaciones y conservar resultados.', correctComp: 'ALU', hint: 'El dato llegó al MDR, ahora debe ir al componente que puede sumar y guardar resultados.',
+        action: () => { cpu.ACC = cpu.MDR; cpu.UC = 'ACC = 8'; updateUI(); flyValue('MDR','ALU',cpu.ACC); } },
+      { mission: 'Traer siguiente instrucción', detail: 'El PC ahora apunta a 1 (ADD 11). Repite el proceso de fetch para esta instrucción.', correctComp: 'MAR', hint: 'Igual que al principio, el PC tiene la dirección de la siguiente instrucción. Ponla en el MAR.',
+        action: () => { cpu.MAR = cpu.PC; cpu.busAddr = cpu.PC; updateUI(); flyValue('PC','MAR',cpu.PC); flashBus('bus-addr'); } },
+      { mission: 'Leer ADD 11', detail: 'El PC avanzó: hay una nueva instrucción esperando en memoria. Haz clic en quien la trae.', correctComp: 'RAM', hint: 'El MAR tiene la dirección 1, la RAM debe leer.',
+        action: () => { cpu.busCtrl = 'READ'; cpu.MDR = cpu.RAM[cpu.MAR]; cpu.busData = cpu.MDR; updateUI(); flashBus('bus-ctrl'); flyValue('RAM','MDR',cpu.MDR); flashBus('bus-data'); } },
+      { mission: 'Guardar ADD 11 en IR', detail: '"ADD 11" llegó al registro de datos. Guárdala en el componente donde será decodificada.', correctComp: 'IR', hint: 'La instrucción debe decodificarse en el IR.',
+        action: () => { cpu.IR = cpu.MDR; cpu.PC++; cpu.UC = 'Decodificando: ' + cpu.IR; updateUI(); flyValue('MDR','IR',cpu.IR); } },
+      { mission: 'Preparar lectura de RAM[11]', detail: 'ADD 11 sumará el valor guardado en la dirección 11. ¿Quién le indica a la memoria cuál dirección usar?', correctComp: 'MAR', hint: 'ADD 11 significa sumar el valor de la dirección 11. El MAR guarda la dirección.',
+        action: () => { cpu.MAR = 11; cpu.busAddr = 11; updateUI(); flyValue('IR','MAR',11); flashBus('bus-addr'); } },
+      { mission: 'Leer dato de RAM[11]', detail: 'La dirección ya está lista. Ejecuta la lectura para traer el segundo operando.', correctComp: 'RAM', hint: 'El MAR tiene 11, la RAM lee y pone el dato en el MDR.',
+        action: () => { cpu.busCtrl = 'READ'; cpu.MDR = cpu.RAM[11]; cpu.busData = cpu.MDR; updateUI(); flashBus('bus-ctrl'); flyValue('RAM','MDR',cpu.MDR); flashBus('bus-data'); } },
+      // Paso especial: cálculo
+      { mission: '🧮 Calcular 8 + 4', detail: 'El ACC tiene 8 y el MDR tiene 4. ¿Cuál es el resultado?', correctComp: 'ALU', hint: 'La ALU realiza la operación. El resultado se guarda en el ACC.',
+        action: () => { let res = 8 + 4; cpu.ACC = res; cpu.UC = 'ALU: 8+4=' + res; updateUI(); flyValue('MDR','ALU',res,'chip-green'); },
+        special: 'calculate', expected: 12 },
+      { mission: 'Traer STORE 12', detail: 'El PC apunta a 2 (STORE 12). Trae la instrucción.', correctComp: 'MAR', hint: 'Repite el fetch, ahora con PC=2.',
+        action: () => { cpu.MAR = cpu.PC; cpu.busAddr = cpu.PC; updateUI(); flyValue('PC','MAR',cpu.PC); flashBus('bus-addr'); } },
+      { mission: 'Leer STORE 12', detail: 'Antes de guardar el resultado, trae desde memoria la instrucción que lo hará.', correctComp: 'RAM', hint: 'RAM lee la dirección que está en MAR.',
+        action: () => { cpu.busCtrl = 'READ'; cpu.MDR = cpu.RAM[cpu.MAR]; cpu.busData = cpu.MDR; updateUI(); flashBus('bus-ctrl'); flyValue('RAM','MDR',cpu.MDR); flashBus('bus-data'); } },
+      { mission: 'Guardar STORE 12 en IR', detail: 'Registra "STORE 12" en el componente de decodificación para poder ejecutarla.', correctComp: 'IR', hint: 'IR recibe la instrucción.',
+        action: () => { cpu.IR = cpu.MDR; cpu.PC++; cpu.UC = 'Decodificando: ' + cpu.IR; updateUI(); flyValue('MDR','IR',cpu.IR); } },
+      { mission: 'Preparar escritura en RAM[12]', detail: 'Para escribir en memoria se necesitan dos piezas: la dirección destino (12) y el dato a guardar (el resultado). Prepáralas con un clic.', correctComp: 'MAR', hint: 'El MAR debe tener la dirección destino (12) y el MDR el dato a guardar.',
+        action: () => { cpu.MAR = 12; cpu.busAddr = 12; cpu.MDR = cpu.ACC; cpu.busData = cpu.MDR; updateUI(); flyValue('IR','MAR',12); setTimeout(() => flyValue('ALU','MDR',cpu.ACC,'chip-green'), 200); flashBus('bus-addr'); flashBus('bus-data'); } },
+      { mission: 'Escribir en RAM[12]', detail: 'Todo listo: dirección cargada y dato en el registro. Ejecuta la escritura en memoria.', correctComp: 'RAM', hint: 'Ahora la RAM escribe el dato del MDR en la dirección que tiene el MAR.',
+        action: () => { cpu.busCtrl = 'WRITE'; cpu.RAM[12] = cpu.MDR; cpu.UC = 'RAM[12] = ' + cpu.MDR; updateUI(); flashBus('bus-ctrl'); flyValue('MDR','RAM',cpu.MDR,'chip-green'); } },
+      { mission: '🏁 Finalizar ejecución', detail: 'Ejecuta HALT para detener la CPU.', correctComp: 'UC', hint: 'La Unidad de Control emite la señal de parada.',
+        action: () => { cpu.IR = 'HALT'; cpu.UC = 'CPU DETENIDA'; updateUI(); flyValue('IR','UC','HALT','chip-red'); },
+        special: 'final' }
+    ];
+
+    // ===== ANIMACIONES =====
+    const VAL_ID = { PC:'PC', MAR:'MAR', MDR:'MDR', IR:'IR', ALU:'ACC', UC:'UC', RAM:'RAM' };
+
+    // ===== MEMORIA RAM VISUAL =====
+    const RAM_LAYOUT = [
+      { addr: 0,  type: 'instr' },
+      { addr: 1,  type: 'instr' },
+      { addr: 2,  type: 'instr' },
+      { addr: 3,  type: 'instr' },
+      { addr: 10, type: 'data'  },
+      { addr: 11, type: 'data'  },
+      { addr: 12, type: 'data'  }
+    ];
+
+    function buildRamGrid() {
+      const grid = document.getElementById('ram-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      RAM_LAYOUT.forEach(({ addr, type }) => {
+        const cell = document.createElement('div');
+        cell.className = 'ram-cell ' + type;
+        cell.id = 'ram-cell-' + addr;
+        cell.innerHTML = '<div class="addr">[' + addr + ']</div><div class="content"></div>';
+        grid.appendChild(cell);
+      });
+      window._prevRAM = {};
+    }
+
+    function updateRAM() {
+      const prev = window._prevRAM || {};
+      RAM_LAYOUT.forEach(({ addr }) => {
+        const cell = document.getElementById('ram-cell-' + addr);
+        if (!cell) return;
+        const contentEl = cell.querySelector('.content');
+        const content = String(cpu.RAM[addr]);
+        if (contentEl.innerText !== content) {
+          const isFirstPaint = prev[addr] === undefined;
+          contentEl.innerText = content;
+          if (!isFirstPaint && prev[addr] !== content) {
+            // Celda escrita: destello verde
+            cell.classList.add('written');
+            setTimeout(() => cell.classList.remove('written'), 900);
+            if (HAS_ANIME) anime({ targets: cell, scale: [{ value: 1.12, duration: 120 }, { value: 1, duration: 300 }], easing: 'easeInOutQuad' });
+            playSound('write');
+          }
+        }
+        // Resaltar la celda que apunta el MAR
+        cell.classList.toggle('active', cpu.MAR !== '--' && String(cpu.MAR) === String(addr));
+      });
+      window._prevRAM = Object.assign({}, cpu.RAM);
+    }
+
+    function flyValue(fromComp, toComp, text, colorClass) {
+      const from = document.getElementById('comp-' + fromComp);
+      const to = document.getElementById('comp-' + toComp);
+      if (!from || !to) { popValue(toComp); return; }
+      if (!HAS_ANIME) { popValue(toComp); return; }
+      const f = from.getBoundingClientRect();
+      const t = to.getBoundingClientRect();
+      const wrap = document.createElement('div');
+      wrap.className = 'fly-wrap';
+      const chip = document.createElement('div');
+      chip.className = 'fly-chip' + (colorClass ? ' ' + colorClass : '');
+      chip.textContent = text;
+      wrap.appendChild(chip);
+      wrap.style.left = (window.scrollX + f.left + f.width/2) + 'px';
+      wrap.style.top = (window.scrollY + f.top + f.height/2) + 'px';
+      document.body.appendChild(wrap);
+      const dx = (t.left + t.width/2) - (f.left + f.width/2);
+      const dy = (t.top + t.height/2) - (f.top + f.height/2);
+      anime({
+        targets: wrap,
+        translateX: dx,
+        translateY: dy,
+        scale: [{ value: 1.2, duration: 250 }, { value: 1, duration: 250 }],
+        duration: 750,
+        easing: 'easeInOutQuad',
+        complete: () => { wrap.remove(); popValue(toComp); }
+      });
+    }
+
+    function popValue(compId) {
+      if (!HAS_ANIME) return;
+      const sel = '#val-' + (VAL_ID[compId] || compId);
+      anime.remove(sel);
+      anime({ targets: sel, scale: [{ value: 1.45, duration: 130 }, { value: 1, duration: 400 }], easing: 'easeInOutQuad' });
+    }
+
+    function flashBus(busId) {
+      if (!HAS_ANIME) return;
+      const sel = '#' + busId;
+      anime.remove(sel);
+      anime({ targets: sel, filter: ['brightness(1)', 'brightness(2.4)', 'brightness(1)'], duration: 650, easing: 'easeInOutQuad' });
+    }
+
+    function shakeEl(el) {
+      if (!HAS_ANIME || !el) return;
+      anime.remove(el);
+      anime({ targets: el, translateX: [{ value: -8, duration: 60 }, { value: 8, duration: 60 }, { value: -5, duration: 60 }, { value: 5, duration: 60 }, { value: 0, duration: 60 }], easing: 'easeInOutQuad' });
+    }
+
+    function confetti() {
+      if (!HAS_ANIME) return;
+      const colors = ['#22c55e', '#6366f1', '#f59e0b', '#ec4899', '#38bdf8'];
+      for (let i = 0; i < 70; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        p.style.cssText = 'width:10px;height:' + (6 + Math.random()*8) + 'px;left:' + (Math.random()*100) + 'vw;background:' + colors[i % colors.length] + ';';
+        document.body.appendChild(p);
+        anime({
+          targets: p,
+          translateY: window.innerHeight + 60,
+          translateX: () => anime.random(-140, 140),
+          rotate: () => anime.random(-540, 540),
+          duration: 1800 + Math.random()*1700,
+          delay: Math.random()*500,
+          easing: 'easeInQuad',
+          complete: () => p.remove()
+        });
+      }
+    }
+
+    function floatPoints(delta) {
+      const s = document.getElementById('score');
+      if (!s) return;
+      const r = s.getBoundingClientRect();
+      const el = document.createElement('div');
+      el.textContent = (delta > 0 ? '+' : '') + delta;
+      el.className = 'float-pts ' + (delta > 0 ? 'text-emerald-400' : 'text-red-400');
+      el.style.left = (r.right + 6) + 'px';
+      el.style.top = r.top + 'px';
+      document.body.appendChild(el);
+      if (HAS_ANIME) {
+        anime({ targets: el, translateY: -30, opacity: [1, 0], duration: 900, easing: 'easeOutQuad', complete: () => el.remove() });
+      } else {
+        setTimeout(() => el.remove(), 900);
+      }
+    }
+
+    // ===== PUNTUACIÓN =====
+    function renderScore(target) {
+      const el = document.getElementById('score');
+      if (!HAS_ANIME) { shownScore = target; el.innerText = target; return; }
+      const obj = { n: shownScore };
+      anime({ targets: obj, n: target, round: 1, duration: 450, easing: 'easeOutQuad', update: () => { el.innerText = obj.n; } });
+      shownScore = target;
+    }
+
+    function addScore(delta) {
+      const old = score;
+      score = Math.max(0, score + delta);
+      const realDelta = score - old;
+      if (realDelta !== 0) floatPoints(realDelta);
+      renderScore(score);
+    }
+
+    function registerSuccess() {
+      streak++;
+      updateStreakUI();
+      let pts = 100 + Math.min(streak - 1, 4) * 15;
+      const speedBonus = (stepStart > 0 && (Date.now() - stepStart) <= 5000) ? 20 : 0;
+      pts += speedBonus;
+      // En modo Reto (sin resaltado) los puntos se multiplican x1.5
+      const mult = guideMode ? 1 : 1.5;
+      const total = Math.round(pts * mult);
+      successes++;
+      addScore(total);
+      return { total, speedBonus };
+    }
+
+    function registerError() {
+      streak = 0;
+      updateStreakUI();
+      errors++;
+      addScore(-20);
+    }
+
+    function updateStreakUI() {
+      const b = document.getElementById('streak-badge');
+      if (streak >= 2) {
+        b.classList.remove('hidden');
+        b.innerText = '🔥 x' + streak;
+      } else {
+        b.classList.add('hidden');
+      }
+    }
+
+    function renderBest() {
+      document.getElementById('best-score').innerText = bestScore;
+    }
+
+    // ===== MODO GUÍA / RETO =====
+    function setMode(guide) {
+      guideMode = guide;
+      try { localStorage.setItem(MODE_KEY, guide ? 'guia' : 'reto'); } catch(e) {}
+      paintModeButtons();
+      refreshGuideHighlight();
+      playSound('click');
+    }
+
+    function paintModeButtons() {
+      const g = document.getElementById('mode-guide');
+      const r = document.getElementById('mode-reto');
+      g.className = 'px-2.5 py-1 rounded-full text-[10px] font-black transition ' + (guideMode ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/60' : 'text-slate-400 hover:text-slate-200');
+      r.className = 'px-2.5 py-1 rounded-full text-[10px] font-black transition ' + (!guideMode ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/60' : 'text-slate-400 hover:text-slate-200');
+    }
+
+    function refreshGuideHighlight() {
+      document.querySelectorAll('.component').forEach(c => c.classList.remove('target'));
+      if (gameFinished || !guideMode) return;
+      const step = STEPS[currentStep];
+      if (!step || step.special === 'calculate') return;
+      // Solo resaltar mientras el paso sigue sin resolverse
+      if (stepResolved) return;
+      const el = document.getElementById('comp-' + step.correctComp);
+      if (el) el.classList.add('target');
+    }
+
+    // ===== UI ACTUALIZACIÓN =====
+    function updateUI() {
+      document.getElementById('val-PC').innerText = cpu.PC;
+      document.getElementById('val-MAR').innerText = cpu.MAR;
+      document.getElementById('val-MDR').innerText = cpu.MDR;
+      document.getElementById('val-IR').innerText = cpu.IR;
+      document.getElementById('val-ACC').innerText = cpu.ACC;
+      document.getElementById('val-UC').innerText = cpu.UC;
+
+      // RAM: en la tarjeta solo se muestra la celda a la que apunta el MAR;
+      // el contenido completo se ve en el panel de memoria visual
+      document.getElementById('val-RAM').innerText = (cpu.MAR === '--') ? '—' : '[' + cpu.MAR + '] ' + cpu.RAM[cpu.MAR];
+      updateRAM();
+
+      document.getElementById('bus-addr-val').innerText = cpu.busAddr;
+      document.getElementById('bus-data-val').innerText = cpu.busData;
+      document.getElementById('bus-ctrl-val').innerText = cpu.busCtrl;
+
+      document.getElementById('bus-addr').className = 'bus-line' + (cpu.busAddr !== '--' ? ' active' : '');
+      document.getElementById('bus-data').className = 'bus-line' + (cpu.busData !== '--' ? ' active' : '');
+      document.getElementById('bus-ctrl').className = 'bus-line' + (cpu.busCtrl !== 'ESPERA' ? ' active' : '');
+    }
+
+    // ===== CARGAR PASO =====
+    function loadStep(index) {
+      if (index >= STEPS.length) {
+        finishGame();
+        return;
+      }
+      currentStep = index;
+      const step = STEPS[index];
+      document.getElementById('mission').innerText = step.mission;
+      document.getElementById('instruction-detail').innerText = step.detail;
+      document.getElementById('step-counter').innerText = (index+1) + '/' + STEPS.length;
+      document.getElementById('progress-fill').style.width = (((index+1) / STEPS.length) * 100) + '%';
+      document.getElementById('feedback').className = 'mt-2 text-xs font-bold hidden';
+
+      // Resetear estados visuales de componentes
+      document.querySelectorAll('.component').forEach(c => {
+        c.classList.remove('correct', 'wrong', 'target', 'selectable');
+      });
+
+      hintUsedThisStep = false;
+      stepResolved = false;
+      stepStart = Date.now();
+
+      // Si es paso especial de cálculo, mostramos input numérico
+      if (step.special === 'calculate') {
+        renderCalculateStep(step);
+        return;
+      }
+
+      // Todos elegibles (brillo suave) + objetivo resaltado solo en modo Guía
+      document.querySelectorAll('.component').forEach(c => c.classList.add('selectable'));
+      refreshGuideHighlight();
+    }
+
+    // ===== RENDER PASO DE CÁLCULO =====
+    function renderCalculateStep(step) {
+      const fb = document.getElementById('feedback');
+      fb.classList.remove('hidden');
+      fb.className = 'mt-2 text-xs font-bold';
+      fb.innerHTML = `
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-white">ACC = 8, MDR = 4</span>
+          <input type="number" id="calc-input" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 w-20 text-center text-lg font-bold text-amber-300" placeholder="?" />
+          <button onclick="submitCalculation()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1 rounded-lg text-xs font-bold">✔</button>
+        </div>
+      `;
+      window._calcStep = step;
+      const inp = document.getElementById('calc-input');
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitCalculation(); });
+      inp.focus();
+    }
+
+    function submitCalculation() {
+      const step = window._calcStep;
+      const input = document.getElementById('calc-input');
+      const val = parseInt(input?.value);
+      const fb = document.getElementById('feedback');
+      if (isNaN(val)) {
+        fb.innerHTML = '<span class="text-red-400">❌ Escribe un número.</span>';
+        shakeEl(fb);
+        return;
+      }
+      if (val === step.expected) {
+        playSound('success');
+        step.action();
+        const res = registerSuccess();
+        let msg = '✅ ¡Correcto! +' + res.total + ' pts';
+        if (!guideMode) msg += ' (×1.5 🔥)';
+        if (res.speedBonus > 0) msg += ' ⚡+' + res.speedBonus;
+        fb.innerHTML = '<span class="text-emerald-400">' + msg + '</span>';
+        stepResolved = true;
+        scheduleNext();
+        document.querySelector('#calc-input')?.setAttribute('disabled','disabled');
+        document.querySelector('#feedback button')?.setAttribute('disabled','disabled');
+      } else {
+        playSound('error');
+        registerError();
+        fb.innerHTML = '<span class="text-red-400">❌ Incorrecto. Intenta de nuevo. (-20)</span>';
+        shakeEl(fb);
+      }
+      updateUI();
+    }
+
+    // ===== MANEJAR CLIC EN COMPONENTE =====
+    function onComponentClick(compId) {
+      if (gameFinished) return;
+      const step = STEPS[currentStep];
+      if (!step) return;
+
+      if (step.special === 'calculate') return;
+
+      const el = document.getElementById('comp-' + compId);
+      if (!el) return;
+
+      if (compId === step.correctComp) {
+        playSound('success');
+        el.classList.remove('selectable', 'target');
+        el.classList.add('correct');
+        step.action();
+        const res = registerSuccess();
+        let msg = '✅ ¡Correcto! +' + res.total + ' pts';
+        if (!guideMode) msg += ' (×1.5 🔥)';
+        if (res.speedBonus > 0) msg += ' ⚡+' + res.speedBonus;
+        document.getElementById('feedback').className = 'mt-2 text-xs font-bold text-emerald-400';
+        document.getElementById('feedback').innerHTML = msg;
+        stepResolved = true;
+        document.querySelectorAll('.component').forEach(c => { c.style.pointerEvents = 'none'; c.classList.remove('selectable', 'target'); });
+        if (step.special === 'final') {
+          setTimeout(() => finishGame(), 1000);
+        } else {
+          // Auto-avance: salta al siguiente paso sin botón
+          scheduleNext();
+        }
+      } else {
+        playSound('error');
+        el.classList.add('wrong');
+        registerError();
+        const fb = document.getElementById('feedback');
+        fb.className = 'mt-2 text-xs font-bold text-red-400';
+        fb.innerHTML = '❌ Incorrecto. ' + step.detail;
+        shakeEl(fb);
+        el.style.pointerEvents = 'none';
+        setTimeout(() => { el.classList.remove('wrong'); el.style.pointerEvents = ''; }, 1000);
+        updateUI();
+      }
+    }
+
+    // ===== AUTO-AVANCE AL SIGUIENTE PASO =====
+    function scheduleNext(delay = 1500) {
+      clearTimeout(advanceTimer);
+      advanceTimer = setTimeout(() => {
+        advanceTimer = null;
+        if (!gameFinished) nextStep();
+      }, delay);
+    }
+
+    // ===== SIGUIENTE PASO =====
+    function nextStep() {
+      document.querySelectorAll('.component').forEach(c => {
+        c.classList.remove('correct', 'wrong', 'target', 'selectable');
+        c.style.pointerEvents = '';
+      });
+      document.getElementById('feedback').className = 'mt-2 text-xs font-bold hidden';
+      loadStep(currentStep + 1);
+    }
+
+    // ===== PISTA =====
+    function showHint() {
+      const step = STEPS[currentStep];
+      if (!step) return;
+      playSound('click');
+      const fb = document.getElementById('feedback');
+      fb.classList.remove('hidden');
+      fb.className = 'mt-2 text-xs font-bold text-amber-300';
+      fb.innerHTML = '💡 ' + step.hint;
+      shakeEl(fb);
+      if (!hintUsedThisStep && !gameFinished) {
+        hintUsedThisStep = true;
+        addScore(-25);
+      }
+      clearTimeout(showHint._t);
+      showHint._t = setTimeout(() => { fb.classList.add('hidden'); }, 4000);
+    }
+
+    // ===== FINALIZAR JUEGO =====
+    function finishGame() {
+      stopTimer();
+      gameFinished = true;
+      document.getElementById('progress-fill').style.width = '100%';
+      document.getElementById('final-time').innerText = timerSeconds + 's';
+      document.getElementById('final-score').innerText = score;
+      document.getElementById('final-success').innerText = successes;
+      document.getElementById('final-errors').innerText = errors;
+      document.getElementById('final-mode').innerText = guideMode ? '🎓 Guía' : '🔥 Reto';
+
+      let isNewRecord = false;
+      if (score > bestScore) {
+        bestScore = score;
+        try { localStorage.setItem(BEST_KEY, String(bestScore)); } catch(e) {}
+        isNewRecord = true;
+      }
+      renderBest();
+      document.getElementById('final-best').innerText = bestScore;
+      document.getElementById('new-record').classList.toggle('hidden', !isNewRecord);
+
+      document.getElementById('victory-modal').classList.remove('hidden');
+      if (HAS_ANIME) {
+        anime({ targets: '#victory-modal > div', scale: [0.7, 1], opacity: [0, 1], duration: 550, easing: 'spring(1, 80, 10, 0)' });
+        confetti();
+      }
+      playSound('victory');
+      clearTimeout(advanceTimer); advanceTimer = null;
+      document.querySelectorAll('.component').forEach(c => { c.style.pointerEvents = 'none'; c.classList.remove('selectable', 'target'); });
+    }
+
+    // ===== REINICIO =====
+    function resetGame() {
+      stopTimer();
+      document.getElementById('victory-modal').classList.add('hidden');
+      cpu = {
+        PC: 0,
+        MAR: '--',
+        MDR: '--',
+        IR: '---',
+        UC: 'Esperando',
+        ACC: 0,
+        RAM: { 0:'LOAD 10', 1:'ADD 11', 2:'STORE 12', 3:'HALT', 10:8, 11:4, 12:'?' },
+        busAddr: '--',
+        busData: '--',
+        busCtrl: 'ESPERA'
+      };
+      currentStep = 0;
+      score = 0;
+      successes = 0;
+      errors = 0;
+      streak = 0;
+      timerSeconds = 0;
+      gameFinished = false;
+      updateStreakUI();
+      document.getElementById('timer').innerText = '00:00';
+      renderScore(0);
+      buildRamGrid();
+      updateUI();
+      document.querySelectorAll('.component').forEach(c => c.style.pointerEvents = '');
+      clearTimeout(advanceTimer); advanceTimer = null;
+      startTimer();
+      loadStep(0);
+    }
+
+    // ===== TIMER =====
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerSeconds = 0;
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        let m = String(Math.floor(timerSeconds/60)).padStart(2,'0');
+        let s = String(timerSeconds%60).padStart(2,'0');
+        document.getElementById('timer').innerText = m + ':' + s;
+      }, 1000);
+    }
+    function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+
+    // ===== SONIDOS =====
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+      }
+      if (audioCtx.state === 'suspended') { audioCtx.resume().catch(() => {}); }
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      try {
+        let ctx = getAudioCtx();
+        if (!ctx) return;
+        let osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, ctx.currentTime);
+          gain.gain.setValueAtTime(0.06, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime+0.05);
+          osc.start(); osc.stop(ctx.currentTime+0.05);
+        } else if (type === 'success') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523, ctx.currentTime);
+          osc.frequency.setValueAtTime(659, ctx.currentTime+0.08);
+          osc.frequency.setValueAtTime(784, ctx.currentTime+0.16);
+          gain.gain.setValueAtTime(0.1, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime+0.25);
+          osc.start(); osc.stop(ctx.currentTime+0.25);
+        } else if (type === 'error') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(90, ctx.currentTime+0.15);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime+0.15);
+          osc.start(); osc.stop(ctx.currentTime+0.15);
+        } else if (type === 'write') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.setValueAtTime(1174, ctx.currentTime + 0.04);
+          gain.gain.setValueAtTime(0.05, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.005, ctx.currentTime + 0.1);
+          osc.start(); osc.stop(ctx.currentTime + 0.1);
+        } else if (type === 'victory') {
+          [523,659,784,1047].forEach((f,i) => {
+            let o = ctx.createOscillator(), g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.type = 'sine';
+            o.frequency.setValueAtTime(f, ctx.currentTime+i*0.1);
+            g.gain.setValueAtTime(0.12, ctx.currentTime+i*0.1);
+            g.gain.linearRampToValueAtTime(0.01, ctx.currentTime+i*0.1+0.2);
+            o.start(ctx.currentTime+i*0.1);
+            o.stop(ctx.currentTime+i*0.1+0.2);
+          });
+        }
+      } catch(e) {}
+    }
+
+    // ===== ASIGNAR EVENTOS A COMPONENTES =====
+    document.querySelectorAll('.component').forEach(el => {
+      const comp = el.dataset.comp;
+      el.addEventListener('click', () => onComponentClick(comp));
+    });
+
+    // ===== INICIO =====
+    window.onload = function() {
+      buildRamGrid();
+      renderBest();
+      paintModeButtons();
+      resetGame();
+    };
+
+    // Hacer accesibles funciones globales para botones HTML
+    window.submitCalculation = submitCalculation;
+    window.nextStep = nextStep;
+    window.showHint = showHint;
+    window.resetGame = resetGame;
+    window.setMode = setMode;
+  </script>
+</body>
+</html>
